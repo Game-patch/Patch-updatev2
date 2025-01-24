@@ -12,3 +12,4 @@ Directory structure:
     ├── index.html
     ├── starsv5.html
     └── weapsons.js
+    └── controls.js
