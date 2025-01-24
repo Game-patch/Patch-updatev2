@@ -20,10 +20,11 @@ let player = {
   health: 125, // Player health starts at 125
 };
 
-let bullets = [];
+
 let enemies = [];
 let score = 0;
 
+let bullets = [];
 // Cooldown variables
 let lastShotTime = 0; // Time when the last bullet was shot
 const cooldownPeriod = 300; // Cooldown period for shooting in milliseconds (300ms)
@@ -38,7 +39,6 @@ const batteryRechargeRate = 0.5; // Slightly slower recharge rate
 
 document.addEventListener("keydown", movePlayer);
 document.addEventListener("keyup", stopPlayer);
-document.addEventListener("keydown", shootBullet);
 
 // Bomb-specific variables
 // Bomb-specific variables
@@ -49,14 +49,12 @@ const bombEffectRadius = 100; // Radius of bomb explosion
 let bombEffectStartTime = 0; // T   ime when bomb effect started
 let isBombDeployed = false; // Flag to check if bomb is deployed
 
-document.addEventListener("keydown", deployBomb);
 
-function deployBomb(e) {
+function deployBomb() {
   const currentTime = Date.now();
 
   // Check if enough time has passed, and if there is enough battery to deploy a bomb
   if (
-    e.key === "b" && // Press "B" to deploy a bomb
     currentTime - lastBombTime >= bombCooldown &&
     battery >= bombBatteryConsumption
   ) {
@@ -92,6 +90,8 @@ function deployBomb(e) {
     }, bombCooldown); // Reset the bomb effect after cooldown
   }
 }
+
+
 function drawBombEffect() {
   if (isBombDeployed) {
     const effectDuration = 1000; // Duration of the explosion effect in milliseconds
@@ -174,18 +174,15 @@ function shootBullet(e) {
 
   // Check if the spacebar is pressed and other conditions (cooldown, battery, etc.)
   if (
-    e.key === " " &&
     currentTime - lastShotTime >= cooldownPeriod && // Cooldown check for shooting
     battery >= batteryConsumption && // Check if enough battery is available
     currentTime - lastBatteryCooldownTime >= batteryCooldownPeriod
   ) {
-    // Battery cooldown check
 
-    // Start shooting if the spacebar is pressed and not already shooting
+    // Start shooting if not already shooting
     if (!isShooting) {
       isShooting = true;
       shootIntervalID = setInterval(() => {
-        // Shoot continuously at the defined interval
         const currentShotTime = Date.now();
         if (
           currentShotTime - lastShotTime >= cooldownPeriod &&
@@ -237,17 +234,34 @@ function updateBullets() {
   }
 }
 
+// Add event listeners (assuming you have a game loop or update function)
+//document.addEventListener("keydown", shootBullet); // Uncomment if shooting is triggered by spacebar press
+document.addEventListener("keyup", stopShooting);
 function drawBullets() {
   // Create a fading effect on the canvas
   ctx.fillStyle = "rgba(0, 0, 0, 0.2)"; // Adjust the alpha for stronger or weaker trails
   ctx.fillRect(0, 0, canvas.width, canvas.height); // Apply the fade
 
-  // Draw bullets with rounded rectangles
-  ctx.fillStyle = "yellow";
   for (let i = 0; i < bullets.length; i++) {
     const { x, y, width, height } = bullets[i];
-    ctx.beginPath();
     const radius = 4; // Adjust as needed
+
+    // Draw the bullet tail
+    drawBulletTail(x, y, width, height);
+
+    // Create gradient for the bullets
+    const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
+    gradient.addColorStop(0, "yellow");
+    gradient.addColorStop(0.5, "gold");
+    gradient.addColorStop(1, "orange");
+
+    // Add shadow for a more pronounced glow effect
+    ctx.shadowColor = "orange";
+    ctx.shadowBlur = 15;
+
+    // Draw the bullet with gradient and shadow
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
     ctx.moveTo(x + radius, y);
     ctx.arcTo(x + width, y, x + width, y + height, radius);
     ctx.arcTo(x + width, y + height, x, y + height, radius);
@@ -255,12 +269,45 @@ function drawBullets() {
     ctx.arcTo(x, y, x + width, y, radius);
     ctx.closePath();
     ctx.fill();
+
+    // Draw sparkles for additional detail
+    drawSparkles(x, y, width, height);
+
+    // Reset shadow settings
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
   }
 }
 
-// Event listeners for the spacebar press and release
-window.addEventListener("keydown", shootBullet);
-window.addEventListener("keyup", stopShooting);
+function drawBulletTail(x, y, width, height) {
+  const tailLength = 20; // Length of the bullet tail
+  for (let i = 1; i <= tailLength; i++) {
+    const tailX = x - (width / tailLength) * i;
+    const tailWidth = width - (width / tailLength) * i;
+    const alpha = 1 - i / tailLength;
+    ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`; // Gold color with fading alpha
+    ctx.beginPath();
+    ctx.moveTo(tailX + width, y);
+    ctx.arcTo(tailX + tailWidth, y, tailX + tailWidth, y + height, 4);
+    ctx.arcTo(tailX + tailWidth, y + height, tailX, y + height, 4);
+    ctx.arcTo(tailX, y + height, tailX, y, 4);
+    ctx.arcTo(tailX, y, tailX + tailWidth, y, 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawSparkles(x, y, width, height) {
+  const sparkleCount = 3; // Number of sparkles per bullet
+  ctx.fillStyle = "white";
+  for (let i = 0; i < sparkleCount; i++) {
+    const sparkleX = x + Math.random() * width;
+    const sparkleY = y + Math.random() * height;
+    ctx.beginPath();
+    ctx.arc(sparkleX, sparkleY, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
 function updatePlayer() {
   player.x += player.dx;
