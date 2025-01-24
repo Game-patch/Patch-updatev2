@@ -12,11 +12,10 @@ let iceLastShotTime = 0; // Last shot time for the ice weapon
 const iceBullets = [];
 
 // Ice weapon shooting logic
-function shootIceBullet(e) {
+function shootIceBullet() {
   const currentTime = Date.now();
 
   if (
-    e.key === "i" && // Press "I" to shoot ice weapon
     currentTime - iceLastShotTime >= iceShootInterval && // Check rate of fire
     battery >= iceBatteryConsumption // Ensure enough battery is available
   ) {
@@ -42,16 +41,32 @@ function shootIceBullet(e) {
       iceLastShotTime = currentTime; // Update last shot time
       battery -= iceBatteryConsumption; // Consume battery for the shot
       iceSound.play(); // Play the ice weapon sound effect
+
+      // Reset isIceShooting after the shot
+      setTimeout(() => {
+        isIceShooting = false;
+      }, iceShootInterval);
     }
   }
 }
 
-// Stop shooting ice bullets when the "I" key is released
-function stopIceShooting(e) {
-  if (e.key === "i") {
-    isIceShooting = false;
+document.addEventListener("keydown", (e) => {
+  if (e.key === "z") { // Press "Z" to shoot ice weapon
+    shootIceBullet();
   }
-}
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "m") { // Press "M" to shoot a missile
+    shootMissile();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "b") { // Press "B" to deploy a bomb
+    deployBomb();
+  }
+});
+
 
 // Update the position of ice bullets
 function updateIceBullets() {
@@ -150,115 +165,6 @@ function applyIceEffect(enemy, bullet) {
   }, effectDuration); // Slowdown lasts for the specified duration
 }
 
-// Global array to hold all damage indicators
-
-const icecollisionSound = new Audio("Collision Sound Effect.mp3"); // Load the collision sound file
-
-const damageSound = new Audio("Damage Sound Effect.mp3"); // Load the damage sound file
-
-function detectIceBulletCollisions(enemies) {
-  for (let i = 0; i < iceBullets.length; i++) {
-    for (let j = 0; j < enemies.length; j++) {
-      const bullet = iceBullets[i];
-      const enemy = enemies[j];
-
-      // Collision detection logic
-      if (
-        bullet.x < enemy.x + enemy.width &&
-        bullet.x + bullet.width > enemy.x &&
-        bullet.y < enemy.y + enemy.height &&
-        bullet.y + bullet.height > enemy.y
-      ) {
-        // Collision detected, apply base damage
-        enemy.health -= bullet.damage;
-
-        // Apply incremental damage and effects from the ice bullet
-        applyIceEffect(enemy, bullet);
-
-        // Show ice damage indicator
-        // (Assuming you have a function for this)
-
-        // Show the numerical damage indicator
-        showDamageNumber(enemy, bullet.damage);
-
-        // Play the collision sound
-        icecollisionSound.play();
-
-        // play damage sound
-        damageSound.play();
-
-        // Check if the enemy's health is 0 or below, and remove them from the array
-        if (enemy.health <= 0) {
-          // Remove the enemy from the enemies array
-          enemies.splice(j, 1);
-          j--; // Adjust index due to removal of the enemy
-
-          // Increment score and coins
-          score += 30; // Add 30 points for defeating the enemy
-          coins += 8; // Add 8 coins for defeating the enemy
-        }
-
-        // Remove the ice bullet after hit
-        iceBullets.splice(i, 1);
-        i--; // Adjust index due to removal of the bullet
-        break; // Exit the loop once the bullet collides with an enemy
-      }
-    }
-  }
-}
-
-// Global array to hold active indicators
-let indicators = [];
-
-// Function to show numerical damage indicator
-function showDamageNumber(enemy, damage) {
-  // Remove any previous damage indicators for this enemy
-  indicators = indicators.filter((indicator) => !(indicator.enemy === enemy));
-
-  // Create a new damage number indicator object
-  const damageNumber = {
-    enemy: enemy, // Store the enemy reference to identify and replace later
-    x: enemy.x + enemy.width / 2, // Position at the center of the enemy
-    y: enemy.y - 30, // Slightly above the enemy
-    text: `-${damage}`, // Show the numerical damage amount
-    color: "#C2DFE1", // Color of the damage number
-    size: 24, // Updated text size for the damage number (22px)
-    duration: 1.0, // Duration for the effect in seconds
-  };
-
-  // Push the damage number to the indicators array
-  indicators.push(damageNumber);
-
-  // Remove the damage number after the specified duration
-  setTimeout(() => {
-    const index = indicators.indexOf(damageNumber);
-    if (index > -1) {
-      indicators.splice(index, 1); // Remove the damage number after duration
-    }
-  }, damageNumber.duration * 1000);
-}
-
-// Function to render the indicators (e.g., on a canvas)
-function renderIndicators(ctx) {
-  // Loop through all active indicators and render them
-  for (const indicator of indicators) {
-    ctx.fillStyle = indicator.color;
-    ctx.font = `${indicator.size}px Arial`; // Use the updated size here
-    ctx.fillText(indicator.text, indicator.x, indicator.y);
-
-    // Animate the indicator's movement (e.g., move it upwards and fade out)
-    indicator.y -= 2; // Move upward
-    indicator.size *= 0.98; // Fade text by shrinking font size (optional)
-  }
-}
-
-// Event listeners for the "I" key press and release
-window.addEventListener("keydown", shootIceBullet);
-window.addEventListener("keyup", stopIceShooting);
-
-// Event listeners for the "I" key press and release
-window.addEventListener("keydown", shootIceBullet);
-window.addEventListener("keyup", stopIceShooting);
 // Missile properties
 const missileSound = new Audio("Missile Launch Sound Effect.mp3"); // Load missile sound file
 const missileMaxCount = 99; // Maximum number of missiles
@@ -271,11 +177,10 @@ let missileLastShotTime = 0; // Last shot time for missiles
 const missiles = [];
 
 // Missile shooting logic
-function shootMissile(e) {
+function shootMissile() {
   const currentTime = Date.now();
 
   if (
-    e.key === "m" && // Press "M" to shoot a missile
     missileCount > 0 && // Check if missiles are available
     currentTime - missileLastShotTime >= missileCooldown // Check cooldown
   ) {
@@ -332,7 +237,10 @@ function drawMissiles() {
     ctx.fillStyle = gradient;
     ctx.beginPath();
     ctx.moveTo(missiles[i].x + missiles[i].width / 2, missiles[i].y); // Nose
-    ctx.lineTo(missiles[i].x + missiles[i].width, missiles[i].y + missiles[i].height); // Right fin
+    ctx.lineTo(
+      missiles[i].x + missiles[i].width,
+      missiles[i].y + missiles[i].height
+    ); // Right fin
     ctx.lineTo(missiles[i].x, missiles[i].y + missiles[i].height); // Left fin
     ctx.closePath();
     ctx.fill();
@@ -345,18 +253,36 @@ function drawMissiles() {
     // Draw fins for added realism
     ctx.fillStyle = "rgba(200, 0, 0, 0.8)"; // Darker red for fins
     ctx.beginPath();
-    ctx.moveTo(missiles[i].x + missiles[i].width / 2, missiles[i].y + missiles[i].height); // Base of the missile
-    ctx.lineTo(missiles[i].x + missiles[i].width * 0.75, missiles[i].y + missiles[i].height + 10); // Right fin
-    ctx.lineTo(missiles[i].x + missiles[i].width * 0.25, missiles[i].y + missiles[i].height + 10); // Left fin
+    ctx.moveTo(
+      missiles[i].x + missiles[i].width / 2,
+      missiles[i].y + missiles[i].height
+    ); // Base of the missile
+    ctx.lineTo(
+      missiles[i].x + missiles[i].width * 0.75,
+      missiles[i].y + missiles[i].height + 10
+    ); // Right fin
+    ctx.lineTo(
+      missiles[i].x + missiles[i].width * 0.25,
+      missiles[i].y + missiles[i].height + 10
+    ); // Left fin
     ctx.closePath();
     ctx.fill();
 
     // Optional: Add a small flame effect at the back of the missile
     ctx.fillStyle = "rgba(255, 69, 0, 0.8)"; // Flame color
     ctx.beginPath();
-    ctx.moveTo(missiles[i].x + missiles[i].width / 2, missiles[i].y + missiles[i].height); // Base of the missile
-    ctx.lineTo(missiles[i].x + missiles[i].width / 2 - 5, missiles[i].y + missiles[i].height + 10); // Left flame
-    ctx.lineTo(missiles[i].x + missiles[i].width / 2 + 5, missiles[i].y + missiles[i].height + 10); // Right flame
+    ctx.moveTo(
+      missiles[i].x + missiles[i].width / 2,
+      missiles[i].y + missiles[i].height
+    ); // Base of the missile
+    ctx.lineTo(
+      missiles[i].x + missiles[i].width / 2 - 5,
+      missiles[i].y + missiles[i].height + 10
+    ); // Left flame
+    ctx.lineTo(
+      missiles[i].x + missiles[i].width / 2 + 5,
+      missiles[i].y + missiles[i].height + 10
+    ); // Right flame
     ctx.closePath();
     ctx.fill();
   }
@@ -372,9 +298,6 @@ function drawMissileCount() {
   ctx.fillStyle = "white";
   ctx.fillText(`Missiles: ${missileCount}`, 20, 30);
 }
-
-// Add event listeners for missiles
-document.addEventListener("keydown", shootMissile);
 
 // Recharge missiles (optional feature)
 //setInterval(() => {
@@ -425,7 +348,7 @@ function gameLoop() {
   renderIndicators(ctx);
   drawBullets();
 
-  // New  weapon Misssile 
+  // New  weapon Misssile
   // Update missiles
   updateMissiles();
   // Draw missiles
