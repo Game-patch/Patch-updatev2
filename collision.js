@@ -4,7 +4,7 @@ function detectCollisions() {
   // Check if bullets hit enemies
   // Preload the collision sound
   const enemycollisionSound = new Audio("collision-sound.mp3");
-  enemycollisionSound.volume = 0.2; // Set the volume to full (equivalent to 10 on a 0-10 scale)
+  enemycollisionSound.volume = 0.2; // Set the volume to 20%
 
   for (let i = 0; i < bullets.length; i++) {
     for (let j = 0; j < enemies.length; j++) {
@@ -14,38 +14,32 @@ function detectCollisions() {
         bullets[i].y < enemies[j].y + enemies[j].height &&
         bullets[i].y + bullets[i].height > enemies[j].y
       ) {
-        // Apply initial bullet damage to the enemy
-        enemies[j].health -= bullets[i].damage;
+        // Calculate the distance between the bullet and the enemy
+        const distance = Math.sqrt(
+          (enemies[j].x - bullets[i].x) ** 2 + (enemies[j].y - bullets[i].y) ** 2
+        );
+
+        let damageModifier = 1; // Default modifier is 1 (no change)
+
+        if (distance > 100) {
+          // Example threshold for long distance
+          damageModifier = 0.5; // Decrease damage by 50%
+        } else if (distance < 50) {
+          // Example threshold for short distance
+          damageModifier = 1.2; // Increase damage by 20%
+        }
+
+        const modifiedDamage = bullets[i].damage * damageModifier;
+        enemies[j].health -= modifiedDamage;
 
         // Create a floating damage indicator
         damageIndicators.push({
           x: enemies[j].x + enemies[j].width / 2,
           y: enemies[j].y + enemies[j].height / 2,
-          text: bullets[i].damage,
+          text: modifiedDamage.toFixed(2), // Show the modified damage
           lifetime: 30, // How long the indicator lasts
           color: getRandomColor(), // Assign a random color
         });
-
-        // 5% chance for the bullet to hit multiple times (adjust the chance as per your needs)
-        let multiHitChance = Math.random() < 0.05; // 5% chance to trigger multiple hits
-
-        if (multiHitChance) {
-          let additionalHits = Math.floor(Math.random() * 8) + 5; // Additional 5-12 hits if multi-hit happens
-
-          for (let hit = 0; hit < additionalHits; hit++) {
-            // Apply additional damage to the enemy
-            enemies[j].health -= bullets[i].damage;
-
-            // Add additional damage indicators for each hit
-            damageIndicators.push({
-              x: enemies[j].x + enemies[j].width / 2,
-              y: enemies[j].y + enemies[j].height / 2,
-              text: bullets[i].damage,
-              lifetime: 30,
-              color: getRandomColor(),
-            });
-          }
-        }
 
         // If the enemy's health is less than or equal to 0, remove it
         if (enemies[j].health <= 0) {
@@ -83,27 +77,21 @@ function detectCollisions() {
       // Check for specific enemy colors and set damage accordingly
       if (enemies[i].color === "grey") {
         damage = 3; // Big grey enemy deals 3 damage
-        player.isFrozen = true; // Freeze the player when hit by a grey enemy
 
-        // Set a timeout for the freeze duration (5 seconds)
-        // setTimeout(() => {
-        // player.isFrozen = false; // Unfreeze the player after 5 seconds
-        // }, 5000);
       } else if (enemies[i].color === "white") {
         damage = 4; // White enemies deal 4 damage
       } else if (enemies[i].color === "silver") {
         damage = 6; // Silver enemies deal 6 damage
-      } else if (enemies[i].color === "orange") {
-        damage = 5; // Orange enemies deal 5 damage
-        // Additional effect for explosive orange enemy can be added here if needed
+      } else if (enemies[i].color === "purple") {
+        damage = 8; // Purple enemies deal 8 damage
       } else {
-        // Regular enemies have random chance for a critical hit
-        const critChance = Math.random() * 100; // Random number between 0 and 100
+        damage = 2; // Regular enemies default to 2 damage
+      }
 
-        // Check if it's a critical hit (7% to 22% or 24.6%)
-        if (critChance >= 7 && critChance <= 22) {
-          damage *= 2; // Double the damage for a critical hit
-        }
+      // Calculate critical hit with a 25% chance
+      const critChance = Math.random() * 100; // Random number between 0 and 100
+      if (critChance < 25) {
+        damage *= 2; // Double the damage for a critical hit
       }
 
       // Reduce player health when hit by enemy
@@ -146,7 +134,7 @@ function detectCollisions() {
 
       if (distance <= bombEffectRadius) {
         // Apply bomb damage to the enemy
-        enemy.health -= 7;
+        enemy.health -= 7.0;
 
         // Create a floating damage indicator for the bomb
         damageIndicators.push({
@@ -288,5 +276,104 @@ function drawDamageIndicators() {
       damageIndicators[i].x,
       damageIndicators[i].y
     );
+  }
+}
+
+const icecollisionSound = new Audio("Collision Sound Effect.mp3"); // Load the collision sound file
+
+const damageSound = new Audio("Damage Sound Effect.mp3"); // Load the damage sound file
+
+function detectIceBulletCollisions(enemies) {
+  for (let i = 0; i < iceBullets.length; i++) {
+    for (let j = 0; j < enemies.length; j++) {
+      const bullet = iceBullets[i];
+      const enemy = enemies[j];
+
+      // Collision detection logic
+      if (
+        bullet.x < enemy.x + enemy.width &&
+        bullet.x + bullet.width > enemy.x &&
+        bullet.y < enemy.y + enemy.height &&
+        bullet.y + bullet.height > enemy.y
+      ) {
+        // Collision detected, apply base damage
+        enemy.health -= bullet.damage;
+
+        // Apply incremental damage and effects from the ice bullet
+        applyIceEffect(enemy, bullet);
+
+        // Show ice damage indicator
+        // (Assuming you have a function for this)
+
+        // Show the numerical damage indicator
+        showDamageNumber(enemy, bullet.damage);
+
+        // Play the collision sound
+        icecollisionSound.play();
+
+        // play damage sound
+        damageSound.play();
+
+        // Check if the enemy's health is 0 or below, and remove them from the array
+        if (enemy.health <= 0) {
+          // Remove the enemy from the enemies array
+          enemies.splice(j, 1);
+          j--; // Adjust index due to removal of the enemy
+
+          // Increment score and coins
+          score += 30; // Add 30 points for defeating the enemy
+          coins += 8; // Add 8 coins for defeating the enemy
+        }
+
+        // Remove the ice bullet after hit
+        iceBullets.splice(i, 1);
+        i--; // Adjust index due to removal of the bullet
+        break; // Exit the loop once the bullet collides with an enemy
+      }
+    }
+  }
+}
+
+let indicators = [];
+
+// Function to show numerical damage indicator
+function showDamageNumber(enemy, damage) {
+  // Remove any previous damage indicators for this enemy
+  indicators = indicators.filter((indicator) => !(indicator.enemy === enemy));
+
+  // Create a new damage number indicator object
+  const damageNumber = {
+    enemy: enemy, // Store the enemy reference to identify and replace later
+    x: enemy.x + enemy.width / 2, // Position at the center of the enemy
+    y: enemy.y - 30, // Slightly above the enemy
+    text: `-${damage}`, // Show the numerical damage amount
+    color: "#C2DFE1", // Color of the damage number
+    size: 24, // Updated text size for the damage number (22px)
+    duration: 1.0, // Duration for the effect in seconds
+  };
+
+  // Push the damage number to the indicators array
+  indicators.push(damageNumber);
+
+  // Remove the damage number after the specified duration
+  setTimeout(() => {
+    const index = indicators.indexOf(damageNumber);
+    if (index > -1) {
+      indicators.splice(index, 1); // Remove the damage number after duration
+    }
+  }, damageNumber.duration * 1000);
+}
+
+// Function to render the indicators (e.g., on a canvas)
+function renderIndicators(ctx) {
+  // Loop through all active indicators and render them
+  for (const indicator of indicators) {
+    ctx.fillStyle = indicator.color;
+    ctx.font = `${indicator.size}px Arial`; // Use the updated size here
+    ctx.fillText(indicator.text, indicator.x, indicator.y);
+
+    // Animate the indicator's movement (e.g., move it upwards and fade out)
+    indicator.y -= 2; // Move upward
+    indicator.size *= 0.98; // Fade text by shrinking font size (optional)
   }
 }
